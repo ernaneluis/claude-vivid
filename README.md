@@ -17,10 +17,7 @@ Transforms Claude Code's mostly-white terminal output into a colorful, readable 
 ## Install & Apply
 
 ```bash
-# Requires tweakcc for native binary unpack/repack
-npm install -g tweakcc
-
-# Clone and run
+# Clone and run — zero external dependencies
 git clone https://github.com/ernaneluis/claude-vivid.git
 cd claude-vivid
 node claude-vivid.mjs --native
@@ -111,7 +108,7 @@ Automatically colors patterns in Claude's response text using a **single-pass ma
 
 ## How it works
 
-1. **Unpacks** Claude Code native binary JS (via `tweakcc unpack`)
+1. **Unpacks** Claude Code native binary JS (built-in Bun SEA parser)
 2. **Discovers** all theme objects by regex and overrides dark mode colors
 3. **Patches** the markdown renderer (`mD()` function) for headings, bold, italic, links, etc.
 4. **Injects** `_CC_()` — a colorizer function that runs all 30 regex patterns in a **single pass**
@@ -143,7 +140,7 @@ Runs 67+ test cases covering:
 - Claude Code v2.1.x (native binary or npm)
 - Node.js 18+
 - macOS, Linux (Windows untested)
-- Requires [tweakcc](https://github.com/Piebald-AI/tweakcc) for `unpack`/`repack`
+- Zero external dependencies
 
 ## License
 

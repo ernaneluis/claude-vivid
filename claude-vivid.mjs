@@ -9,13 +9,13 @@
  * Usage:
  *   npx claude-vivid [--native | --npm] [--restore]
  *
- * Requires: tweakcc (for unpack/repack of native binary)
- *   npm install -g @anthropic-ai/tweakcc
+ * Zero external dependencies — includes Bun SEA binary unpack/repack.
  */
 
 import { readFileSync, writeFileSync, copyFileSync, existsSync } from "fs";
 import { execSync } from "child_process";
 import { resolve, join } from "path";
+import { extractJS, repackJS } from "./lib/bun-sea.mjs";
 
 // ── Configuration: Your custom colors ──────────────────────────────────────
 // Only override the colors you want to change. Others keep their defaults.
@@ -73,26 +73,45 @@ const DARK_COLORBLIND_OVERRIDES = {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+function findNativeBinary() {
+  // Find the Claude Code native binary
+  const claudeVersionsDir = join(process.env.HOME, ".local", "share", "claude", "versions");
+  try {
+    const entries = execSync(`ls "${claudeVersionsDir}" 2>/dev/null`, { encoding: "utf8" }).trim().split("\n").filter(Boolean);
+    if (entries.length > 0) {
+      const latest = entries.sort().pop();
+      const bin = join(claudeVersionsDir, latest);
+      if (existsSync(bin)) return bin;
+    }
+  } catch {}
+  // Try which claude
+  try {
+    const claudeBin = execSync("which claude 2>/dev/null", { encoding: "utf8" }).trim();
+    if (claudeBin && existsSync(claudeBin)) return claudeBin;
+  } catch {}
+  return null;
+}
+
 function findNativeSource() {
   const home = process.env.HOME;
   const dataDir = join(home, ".claude-vivid");
   const freshJs = join(dataDir, "native-claudejs-fresh.js");
   if (existsSync(freshJs)) return freshJs;
 
-  // Also check legacy .tweakcc location
-  const legacyJs = join(home, ".tweakcc", "native-claudejs-fresh.js");
-  if (existsSync(legacyJs)) return legacyJs;
-
-  // Try to unpack via tweakcc
-  try {
-    const claudeBin = execSync("which claude 2>/dev/null", { encoding: "utf8" }).trim();
-    if (claudeBin) {
+  // Extract from native binary
+  const nativeBin = findNativeBinary();
+  if (nativeBin) {
+    try {
       execSync(`mkdir -p "${dataDir}"`, { stdio: "ignore" });
-      console.log("Unpacking native binary via tweakcc...");
-      execSync(`npx tweakcc unpack "${freshJs}" "${claudeBin}"`, { stdio: "inherit" });
-      if (existsSync(freshJs)) return freshJs;
+      console.log(`Extracting JS from native binary: ${nativeBin}`);
+      const js = extractJS(nativeBin);
+      writeFileSync(freshJs, js);
+      console.log(`Extracted to: ${freshJs}`);
+      return freshJs;
+    } catch (e) {
+      console.error(`Extraction failed: ${e.message}`);
     }
-  } catch {}
+  }
   return null;
 }
 
@@ -227,8 +246,15 @@ if (restore) {
 
     // Repack if native
     if (sourceFile.includes("native-claudejs")) {
-      console.log("Repacking native binary...");
-      execSync(`npx tweakcc repack "${sourceFile}"`, { stdio: "inherit" });
+      const nativeBin = findNativeBinary();
+      if (nativeBin) {
+        console.log(`Repacking into: ${nativeBin}`);
+        const restoredJS = readFileSync(sourceFile, "utf8");
+        repackJS(nativeBin, restoredJS);
+        console.log("Restored and repacked. Restart Claude Code.");
+      } else {
+        console.error("Could not find native binary to repack.");
+      }
     }
   } else {
     console.error("No backup found to restore from.");
@@ -494,28 +520,17 @@ console.log(`\nPatched source written to: ${sourceFile}`);
 
 // Repack if this is the native binary
 if (sourceFile.includes("native-claudejs")) {
-  // Find the native binary to repack into
-  const claudeVersionsDir = join(process.env.HOME, ".local", "share", "claude", "versions");
-  let nativeBinary = null;
-  try {
-    const versions = execSync(`ls "${claudeVersionsDir}" 2>/dev/null`, { encoding: "utf8" }).trim().split("\n");
-    if (versions.length > 0) {
-      const latest = versions.sort().pop();
-      nativeBinary = join(claudeVersionsDir, latest);
-    }
-  } catch {}
-
-  if (nativeBinary) {
-    console.log(`\nRepacking into native binary: ${nativeBinary}`);
+  const nativeBin = findNativeBinary();
+  if (nativeBin) {
+    console.log(`\nRepacking into native binary: ${nativeBin}`);
     try {
-      execSync(`npx tweakcc repack "${sourceFile}" "${nativeBinary}"`, { stdio: "inherit" });
+      repackJS(nativeBin, source);
       console.log("\nDone! Restart Claude Code to see the new colors.");
     } catch (e) {
       console.error(`Repack failed: ${e.message}`);
     }
   } else {
     console.log("\nCould not find native binary. Patched source saved.");
-    console.log(`Run manually: npx tweakcc repack "${sourceFile}" /path/to/claude/binary`);
   }
 } else {
   console.log("\nDone! Restart Claude Code to see the new colors.");

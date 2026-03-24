@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Test suite for _CC_ colorizer patterns.
- * Run: node ~/.tweakcc/test-colorizer.mjs
+ * Run: npm test
  *
  * Tests the regex patterns in isolation (no ANSI codes, no chalk)
  * to verify they match the expected text and nothing else.
