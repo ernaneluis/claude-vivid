@@ -1,0 +1,4 @@
+node_modules/
+*.colorbackup
+native-claudejs-fresh.js
+.DS_Store

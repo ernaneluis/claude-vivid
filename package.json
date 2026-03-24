@@ -1,0 +1,28 @@
+{
+  "name": "claude-vivid",
+  "version": "1.0.0",
+  "description": "Rich syntax highlighting and vivid colors for Claude Code CLI output",
+  "type": "module",
+  "bin": {
+    "claude-vivid": "./claude-vivid.mjs"
+  },
+  "scripts": {
+    "test": "node test.mjs",
+    "apply": "node claude-vivid.mjs --native",
+    "restore": "node claude-vivid.mjs --native --restore"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "syntax-highlighting",
+    "terminal",
+    "colors",
+    "cli"
+  ],
+  "author": "ernaneluis",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ernaneluis/claude-vivid"
+  }
+}
